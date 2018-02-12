@@ -1,7 +1,7 @@
 # example
 
 [![Build
-Status](https://travis-ci.org/mepittma/example.svg?branch=master)](https://travis-ci.org/mepittma/example)
+Status](https://travis-ci.org/mepittma/bmi203-3.svg?branch=master)](https://travis-ci.org/mepittma/bmi203-3)
 
 Example python project with testing.
 
@@ -10,8 +10,8 @@ Example python project with testing.
 To use the package, first make a new conda environment and activate it
 
 ```
-conda create -n exampleenv python=3
-source activate exampleenv
+conda create -n align_env python=3
+source activate align_env
 ```
 
 then run
@@ -21,10 +21,10 @@ conda install --yes --file requirements.txt
 ```
 
 to install all the dependencies in `requirements.txt`. Then the package's
-main function (located in `example/__main__.py`) can be run as follows
+main function (located in `align/__main__.py`) can be run as follows
 
 ```
-python -m example
+python -m align
 ```
 
 ## testing
