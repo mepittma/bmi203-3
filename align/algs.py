@@ -1,24 +1,29 @@
-import numpy as np
+import pandas as pd
 
-def pointless_sort(x):
+def read_blosum(filepath):
     """
-    This function always returns the same values to show how testing
-    works, check out the `test/test_alg.py` file to see.
-    """
-    return np.array([1,2,3])
+    This function accepts the filepath of a substitution matrix that dictates the
+    penalty for swapping two distinct amino acids and returns a pandas dataframe to
+    refer to during alignment.
 
-def bubblesort(x):
-    """
-    Describe how you are sorting `x`
+    Input: filepath to whitespace-delimited substitution matrix
+    Output: pandas dataframe with row/column names of amino acids
     """
 
-    assert 1 == 1
-    return x
+    # Read in the matrix
+    data = pd.read_csv(filepath, comment="#", delim_whitespace=True)
 
-def quicksort(x):
-    """
-    Describe how you are sorting `x`
-    """
+    # Rename the rows to AA abbreviations
+    idx = pd.Series(list(data))
+    data = pd.concat([data, idx], axis=1)
+    data.set_index(0, inplace=True)
+    data = data.rename_axis(None)
 
-    assert 1 == 1
-    return
+    return data
+
+
+def scoring_mat(blosum, seq_n, seq_m, score_mat, state_mat):
+    """
+    This function fills in a scoring matrix for two sequences to align, as well
+    as a matrix that stores the "up", "left", or "right" state of each
+    """
