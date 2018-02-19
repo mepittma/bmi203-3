@@ -34,7 +34,7 @@ def read_prot(filepath):
 
     return seq
 
-def score_seqs(blosum, seq_m, seq_n):
+def score_seqs(blosum, seq_m, seq_n, gapO, gapE):
     """
     This function fills in a scoring matrix for two sequences to align, as well
     as a matrix that stores the previous state of that score (whether it was
@@ -59,10 +59,6 @@ def score_seqs(blosum, seq_m, seq_n):
     # Set the first column equal to zero
     for row in score_mat:
         row.insert(0,0)
-
-    # Set the gap penalty etc.
-    gapO = -5 #opening a gap
-    gapE = -2 #extending a gap
 
     # Start scoring
     for i in range(1,len(seq_m)+1):
@@ -110,3 +106,71 @@ def score_seqs(blosum, seq_m, seq_n):
 
     # Return the score matrix
     return score_mat, state_mat
+
+def max_score(score_mat):
+    """
+    Input: scoring matrix
+    Output: tuple containing (maximum score value, [list of indexes for this score])
+    """
+    # Loop through the list of lists, saving the max value and locations
+    max_seen = 0
+    max_list = []
+    for i in range(1,len(score_mat)):
+        for j in range(1, len(score_mat[0])):
+            if score_mat[i][j] > max_seen:
+                max_seen = score_mat[i][j]
+                max_list = [(i,j)]
+            elif score_mat[i][j] == max_seen:
+                max_list.append((i,j))
+    return max_seen, max_list
+
+def traceback(score_mat, state_mat, max_seen, max_list, seq_m, seq_n):
+    """
+    This function accepts two m+1 by n+1 matrices. It locates the coordinates
+    of the maximum alignment score (given by the score matrix) and traces back
+    (using the state matrix) to return the alignment of the two sequences.
+
+    Inputs:
+        score_mat: scoring matrix
+        state_mat: matrix indicating the source of each cell's maximum score
+        ("align" if it's from an alignment, "ins" if it's from insertion i.e. from
+        north cell, or "del" if it's from deletion i.e. from west cell)
+
+    Output: consensus alignment of the two sequences
+
+    """
+
+    # Find optimal alignments for each max cell
+    alignments = []
+    score = max_seen
+
+    for cell in max_list:
+        residues_m = [] #keep track of residues in alignment
+        residues_n = []
+        i, j = cell
+
+        while score > 0:
+
+            # Alignment score
+            if state_mat[i][j] == "align":
+                residues_m.append(seq_m[i-1])
+                residues_n.append(seq_n[j-1])
+                i = i-1
+                j = j-1
+
+            # Insertion score (came from north cell)
+            elif state_mat[i][j] == "ins":
+                residues_m.append("-")
+                residues_n.append(seq_n[j-1])
+                i = i-1
+
+            # Deletion score (came from west cell)
+            elif state_mat[i][j] == "del":
+                residues_m.append(seq_m[i-1])
+                residues_n.append("-")
+                j = j-1
+
+            # Update score of focal cell
+            score = score_mat[i][j]
+
+    return list(reversed(residues_m)), list(reversed(residues_n))
