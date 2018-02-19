@@ -1,4 +1,5 @@
 import pandas as pd
+from .algs import score_seqs, traceback
 
 def read_blosum(filepath):
     """
@@ -53,13 +54,14 @@ def max_score(score_mat):
     return max_seen, max_list
 
 
-def get_cutoff(base_dir, gapO, gapE, threshold):
+def get_cutoff(base_dir, gapO, gapE, threshold, blosum):
     """
     Inputs:
         filepath: path to list of positive alignment hits
         gapO: penalty for opening a gap
         gapE: penalty for extending a gap
         threshold: desired TP rate
+        blosum: substitution matrix to use
 
     Output: the score threshold required to accept the desired number of TPs
     """
@@ -67,7 +69,7 @@ def get_cutoff(base_dir, gapO, gapE, threshold):
     # Read in the list of true positives, creating a list for alignment scores
     TP_scores = []
     with open(base_dir + "/HW3_due_02_23/Pospairs.txt") as f:
-        pos_count = 0
+
         for line in f:
             prot_1, prot_2 = line.split()
 
@@ -80,10 +82,8 @@ def get_cutoff(base_dir, gapO, gapE, threshold):
             max_seen, max_list = max_score(score_mat)
             TP_scores.append(max_seen)
 
-            pos_count+=1
-
     # Find the 70% cutoff for acceptance of true positives
-    n_to_keep = int(round(0.7 * pos_count))
+    n_to_keep = int(round(0.7 * len(TP_scores)))
     TP_scores.sort(reverse = True)
     keep = TP_scores[0:n_to_keep]
 

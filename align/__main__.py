@@ -23,40 +23,7 @@ params = []
 for gapO in range(1,21):
     for gapE in range(1,6):
 
-        #filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
-        #get_cutoff(filepath, gapO, gapE, 0.7)
-
-        # Read in the list of true positives, creating a list for alignment scores
-        TP_scores = []
-
-        filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
-        with open(filepath) as f:
-            pos_count = 0
-            for line in f:
-                prot_1, prot_2 = line.split()
-
-                # Read in these two sequences
-                seq_m = read_prot(base_dir + "/HW3_due_02_23/" + prot_1)
-                seq_n = read_prot(base_dir + "/HW3_due_02_23/" + prot_2)
-
-                # Create the alignment score matrix
-                score_mat, state_mat = score_seqs(blosum, seq_m, seq_n, -gapO, -gapE)
-                max_seen, max_list = max_score(score_mat)
-                TP_scores.append(max_seen)
-
-                pos_count+=1
-
-        # Find the 70% cutoff for acceptance of true positives
-        n_to_keep = int(round(0.7 * pos_count))
-        TP_scores.sort(reverse = True)
-        keep = TP_scores[0:n_to_keep]
-        t = keep[-1]
-
-        print("All max scores: ", TP_scores)
-        print("Score cutoff for opening penalty of ", gapO, " and extension penalty of ",gapE,": ",t)
-        # Confirm that this is a TP rate of 0.7
-        TP = sum(i > t for i in TP_scores)
-        print(TP/pos_count)
+        t = get_cutoff(base_dir, gapO, gapE, 0.7, blosum)
 
         # Find how many negatives are hits
         negs = []
@@ -90,14 +57,7 @@ for gapO in range(1,21):
 
 print("Parameter results: ", params)
 
-# Return the parameters with the minimum FPR
-FPR = 1
-for tup in params:
-    if tup[2] < FPR:
-        FPR = tup[2]
-        optimal = tup
 
-print("Optimal parameters: ", tup)
 # # # # # # # Question 2 # # # # # # #
 # Using the gap penalties you determined from question 1, which of the provided
 # scoring matrices performs the best, in terms of false positive rate (at a true
