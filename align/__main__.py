@@ -1,7 +1,9 @@
 # this file is only called when the package is called from the command
 # line
 from .algs import score_seqs, traceback
-from .utils import read_blosum, read_prot, max_score, get_cutoff
+from .utils import read_blosum, read_prot, max_score, get_cutoff, score_all_prots
+import matplotlib.pyplot as plt
+import numpy as np
 
 # # # # # # # # # # # # # #   PART I   # # # # # # # # # # # # # #
 
@@ -17,6 +19,7 @@ from .utils import read_blosum, read_prot, max_score, get_cutoff
 base_dir = "/Users/student/Documents/BMI206/bmi203-3"
 blosum = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
 
+"""
 # Test different gap opening/extension penalties on the positives
 params = []
 
@@ -56,7 +59,7 @@ for gapO in range(1,21):
         params.append((gapO,gapE,FPR))
 
 print("Parameter results: ", params)
-
+"""
 
 # # # # # # # Question 2 # # # # # # #
 # Using the gap penalties you determined from question 1, which of the provided
@@ -66,6 +69,67 @@ print("Parameter results: ", params)
 # positives on the Y axis and the fraction of false positives on the X axis.
 # Include on the graph data for each of the provided matrices. Please take care
 # to make your ROC graphs square,with both X and Y axes limited to the range [0:1].
+
+gapO = -6
+gapE = -5
+
+# For each substitution matrix
+roc_items = []
+mat_list = ["BLOSUM50","BLOSUM62","MATIO","PAM100","PAM250"]
+for mat in mat_list:
+
+    # Read in the substitution matrix
+    subst = read_blosum(base_dir + "/HW3_due_02_23/" + mat)
+    print("Read in substitution matrix ", mat,"\n")
+
+    # Get back scores for positive pairs for this matrix
+    filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
+    pos_scores = score_all_prots(subst, filepath, gapO, gapE)
+    print("Found positive scores: ", pos_scores,"\n")
+
+    # Get back scores for negative pairs for this matrix
+    filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
+    neg_scores = score_all_prots(subst, filepath, gapO, gapE)
+    print("Found negative scores: ", neg_scores,"\n")
+
+    # Write these out to a file in case something goes horribly wrong
+    outpath = base_dir + "/HW3_due_02_23/" + mat + "_maxAlignmentScores.txt"
+    print("Printing out to ", outpath)
+    with open(outpath,'w') as f:
+        f.write("positive {}\nnegative {}".format(pos_scores,neg_scores))
+
+    # Select TPR cut-off points to plot
+    TPR = []
+    FPR = []
+    for c in np.arange(0.05, 1.01, 0.01):
+
+        # Find the number of positives to keep for a TPR of i
+        pos_scores.sort(reverse=True)
+        n_to_keep = int(round(c * len(pos_scores)))
+        keep = pos_scores[0:n_to_keep]
+        cutoff = keep[-1]
+
+        # Find TPR at this cutoff (should be close to i, but rounding happens)
+        TPR.append(sum(i > cutoff for i in pos_scores)/len(pos_scores))
+        # Find FRP at this cutoff
+        FPR.append(sum(i > cutoff for i in neg_scores)/len(neg_scores))
+
+    # Save to ROC list
+    print("True Positive Rates: ",TPR,"\n")
+    print("False Positive Rates: ", FPR,"\n")
+    roc_items.append((TPR,FPR))
+
+    # Save out
+    with open(outpath, 'a') as f:
+        f.write("\nTPR: {} \nFPR: {}".format(TPR, FPR))
+
+for i in range(0,len(mat_list)):
+    plt.plot(roc_items[i])
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+plt.gca().set_aspect('equal', adjustable='box')
+plt.legend(mat_list, loc='upper left')
+plt.show()
 
 # # # # # # # Question 3 # # # # # # #
 # How does the performance change if you normalize the Smith-Waterman scores by
