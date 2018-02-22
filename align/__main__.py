@@ -2,7 +2,7 @@
 # line
 from .algs import score_seqs, traceback
 from .utils import read_blosum, read_prot, max_score, get_cutoff, score_all_prots, normal_score, align_and_write
-from .optimize import obj_score
+from .optimize import obj_score, nelder_mead
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -240,9 +240,9 @@ plt.show()
 # and your alignments change following optimization.
 
 # Write out the alignments of positive and negative pairs with original BLOSUM50 matrix.
-
+"""
 filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
-outpath = base_dir + "/HW3_due_02_23/Pos_align.txt"
+outpath = base_dir + "/output/Pos_align.txt"
 subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
 gapO = -6
 gapE = -5
@@ -250,11 +250,49 @@ gapE = -5
 align_and_write(filepath,outpath,subst,gapO,gapE)
 
 filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
-outpath = base_dir + "/HW3_due_02_23/Neg_align.txt"
+outpath = base_dir + "/output/Neg_align.txt"
 align_and_write(filepath,outpath,subst,gapO,gapE)
-
+"""
 
 # Optimize the matrix for true positives at all FPR.
+subst = read_blosum(base_dir + "/HW3_due_02_23/" + mat)
+opt_mat = nelder_mead(start_mat = subst, step = 1)
+print ("Here's the optimized matrix we found: ", opt_mat)
+"""
+# Find ROC values for the
+gapO = -6
+gapE = -5
+mat = "BLOSUM50"
+roc_items = []
+
+# Read in the substitution matrix, get positive and negative scores
+
+filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
+pos_scores = score_all_prots(subst, filepath, gapO, gapE)
+filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
+neg_scores = score_all_prots(subst, filepath, gapO, gapE)
+
+# Select FPR cut-off points to plot
+TPR = []
+FPR = []
+for c in np.arange(0.05, 1.01, 0.01):
+
+    # Find the number of negatives to keep for a FPR of i
+    neg_scores.sort(reverse=True)
+    n_to_keep = int(round(c * len(neg_scores)))
+    keep = neg_scores[0:n_to_keep]
+    cutoff = keep[-1]
+
+    # Find TPR at this cutoff
+    TPR.append(sum(i > cutoff for i in pos_scores)/len(pos_scores))
+    # Find FRP at this cutoff (should be close to i, but doubles and rounding do happen)
+    FPR.append(sum(i > cutoff for i in neg_scores)/len(neg_scores))
+
+# Save to ROC list
+print("True Positive Rates: ",TPR,"\n")
+print("False Positive Rates: ", FPR,"\n")
+roc_items.append((FPR,TPR))
+"""
 
 # Write out the alignments using this matrix.
 

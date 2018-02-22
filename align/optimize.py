@@ -47,13 +47,12 @@ def obj_score(subst):
 
     return score
 
-def nelder_mead(f, start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200, refl=1, expn=2, contr=0.5, shrnk=0.5):
+def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200, refl=1, expn=2, contr=0.5, shrnk=0.5):
     """
     (adapted from https://github.com/fchollet/nelder-mead/blob/master/nelder_mead.py)
 
     Inputs:
-        f = objective function
-        start_mat = substitution matrix to optimize for true positives
+        start_mat = substitution matrix to optimize for true positives - pandas dataframe
         step = distance to move to try new matrix
         improv_thresh, improv_iter = after improv_iter number of iterations without
             improvement greater than improv_thresh, return results
@@ -66,21 +65,21 @@ def nelder_mead(f, start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=
     """
 
     # Initialize
-    prev_best = f(start_mat)
+    #start_mat is pandas
+    #res = [[pandas, score],[pandas,score]]
+    prev_best = obj_score(start_mat)
     res = [[start_mat, prev_best]]    # list of lists to keep track of matrix/score pairs
     no_improv = 0                     # set a count to keep track of how many times this exact matrix was seen
 
-    for i in range(0,len(start_mat)):
-        for j in range(0,len(i)):
-            x = copy.copy(start_mat)        # make a shallow copy of the last matrix to be seen
-            x[i][j] = x[i][j] + step        # add the chosen step to this parameter
-            x[j][i] = x[j][i] + step        # keep symmetric!
-            score = f(x)                    # score this new matrix
-            res.append([x, score])          # append this matrix and score to the running list
+    for i, row in start_mat.iterrows():
+        for j, col in row.items():
+            x = copy.copy(start_mat)                # make a shallow copy of the last matrix to be seen
+            x.iloc[i,j] = x.iloc[i,j] + step        # add the chosen step to this parameter
+            x.iloc[j,i] = x.iloc[j,i] + step        # keep symmetric!
+            score = obj_score(x)                            # score this new matrix
+            res.append([x, score])                  # append this matrix and score to the running list
 
-
-    # Find the best solution up to this point, test whether a break condition has been met
-    # If a break condition hasn't been met,
+    # Run through this loop until a break condition is met
     iters = 0
     while 1:
 
@@ -112,27 +111,28 @@ def nelder_mead(f, start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=
 
         # Calculate centroid
         # Create a centroid matrix of zeroes (a list of lists of zeros)
-        centroid = [[None]*len(start_mat) for _ in range(0,len(start_mat))]
+        centroid = pd.DataFrame(0, index=start_mat.columns.values, columns=start_mat.columns.values)
         print("Rows in centroid matrix: ", len(centroid))
         print("Columns in centroid matrix: ", len(centroid[0]))
 
-        # For every matrix but the last, worst-scoring matrix, iteratively calculate the centroid
+        # Iteratively calculate the centroid using every matrix but the last
         # DOUBLE THE NECESSARY TIME/SPACE, should probably fix
         for tup in res[:-1]:
 
             mat = tup[0]
-            for i in range(0,len(mat)):
-                for j in range(0,i):
-                    centroid[i][j] += mat[i][j]/(len(res)-1)
+            for i, row in start_mat.iterrows():
+                for j, col in row.items():
+                    centroid.iloc[i,j] += mat.iloc[i,j]/(len(res)-1)
 
         # Attempt reflection - does reflecting the worst point through the centroid improve the objective score?
-        xr = move_matrix(refl, centroid, res[-1][0], centroid)
+        #xr = move_matrix(refl, centroid, res[-1][0], centroid)
+        xr = centroid + alpha*(centroid - res[-1][0])
         print("Here's what the centroid matrix looks like: ", centroid)
         print("Here's what the worst matrix looks like: ", res[-1][0])
         print("Here's what the reflected matrix looks like: ", xr)
 
         # If the score of the reflected matrix is better, keep it
-        rscore = f(xr)
+        rscore = obj_score(xr)
         if res[0][1] >= rscore > res[-2][1]:
             # if the score of the best matrix is greater than/equal to the new rscore,
             # which is greater than the second-to-last worst score, replace the worst-scoring matrix
@@ -142,8 +142,9 @@ def nelder_mead(f, start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=
 
         # If the reflection point scores the best so far, try moving the list of solutions in that direction
         if rscore > res[0][1]:
-            xe = move_matrix(expn, res[-1][0], centroid, centroid)
-            escore = f(xe)
+            #xe = move_matrix(expn, res[-1][0], centroid, centroid)
+            xe = centroid + expn*(res[-1][0] - centroid)
+            escore = obj_score(xe)
 
             # Keep whichever score was better
             if escore > rscore:
@@ -156,8 +157,9 @@ def nelder_mead(f, start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=
                 continue
 
         # Contraction
-        xc = move_matrix(contr, res[-1][0], centroid, centroid)
-        cscore = f(xc)
+        #xc = move_matrix(contr, res[-1][0], centroid, centroid)
+        xc = centroid + contr*(res[-1][0] - centroid)
+        cscore = obj_score(xc)
 
         # If the contraction score is better than the worst score, replace
         if cscore > res[-1][1]:
@@ -170,6 +172,7 @@ def nelder_mead(f, start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=
         nres = []
         for pair in res:
             redx = move_matrix(shrnk, pair[0], x1, x1)
-            score = f(redx)
+            redx = x1 + shrnk*(pair[0] - x1)
+            score = obj_score(redx)
             nres.append([redx, score])
         res = nres
