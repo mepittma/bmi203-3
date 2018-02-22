@@ -121,3 +121,33 @@ def score_all_prots(subst, filepath, gapO, gapE):
             scores.append(max_seen)
 
     return scores
+
+def normal_score(subst, filepath, gapO, gapE):
+    """
+    Inputs: sustitution matrix and the filepath of the protein pair file to read,
+    plust gap penalty scheme for opening/extension
+    Output: list of max alignment scores for each of these pairs, normalized by length of shortest sequence
+    """
+
+    base_dir = "/Users/student/Documents/BMI206/bmi203-3"
+
+    with open(filepath) as f:
+
+        scores = []
+
+        for line in f:
+            prot_1, prot_2 = line.split()
+
+            # Read in these two sequences
+            seq_m = read_prot(base_dir + "/HW3_due_02_23/" + prot_1)
+            seq_n = read_prot(base_dir + "/HW3_due_02_23/" + prot_2)
+
+            # Find the minimum sequence length
+            norm = min(len(seq_m),len(seq_n))
+
+            # Create the alignment score matrix
+            score_mat, state_mat = score_seqs(subst, seq_m.upper(), seq_n.upper(), gapO, gapE)
+            max_seen, max_list = max_score(score_mat)
+            scores.append(max_seen/norm)
+
+    return scores

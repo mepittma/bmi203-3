@@ -1,7 +1,8 @@
 # this file is only called when the package is called from the command
 # line
 from .algs import score_seqs, traceback
-from .utils import read_blosum, read_prot, max_score, get_cutoff, score_all_prots
+from .utils import read_blosum, read_prot, max_score, get_cutoff, score_all_prots, normal_score
+from .optimize import obj_score
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -69,7 +70,7 @@ print("Parameter results: ", params)
 # positives on the Y axis and the fraction of false positives on the X axis.
 # Include on the graph data for each of the provided matrices. Please take care
 # to make your ROC graphs square,with both X and Y axes limited to the range [0:1].
-
+"""
 gapO = -6
 gapE = -5
 
@@ -103,37 +104,144 @@ for mat in mat_list:
     FPR = []
     for c in np.arange(0.05, 1.01, 0.01):
 
-        # Find the number of positives to keep for a TPR of i
-        pos_scores.sort(reverse=True)
-        n_to_keep = int(round(c * len(pos_scores)))
-        keep = pos_scores[0:n_to_keep]
+        # Find the number of negatives to keep for a FPR of i
+        neg_scores.sort(reverse=True)
+        n_to_keep = int(round(c * len(neg_scores)))
+        keep = neg_scores[0:n_to_keep]
         cutoff = keep[-1]
 
-        # Find TPR at this cutoff (should be close to i, but rounding happens)
+        # Find TPR at this cutoff
         TPR.append(sum(i > cutoff for i in pos_scores)/len(pos_scores))
-        # Find FRP at this cutoff
+        # Find FRP at this cutoff (should be close to i, but doubles and rounding do happen)
         FPR.append(sum(i > cutoff for i in neg_scores)/len(neg_scores))
 
     # Save to ROC list
     print("True Positive Rates: ",TPR,"\n")
     print("False Positive Rates: ", FPR,"\n")
-    roc_items.append((TPR,FPR))
+    roc_items.append((FPR,TPR))
 
     # Save out
     with open(outpath, 'a') as f:
         f.write("\nTPR: {} \nFPR: {}".format(TPR, FPR))
 
+    # Test ROC curve for this substitution matrix
+    #plt.plot(FPR,TPR)
+    #plt.show()
+
 for i in range(0,len(mat_list)):
-    plt.plot(roc_items[i])
+    plt.plot(roc_items[i][0],roc_items[i][1])
 plt.xlim(0, 1)
 plt.ylim(0, 1)
 plt.gca().set_aspect('equal', adjustable='box')
-plt.legend(mat_list, loc='upper left')
+plt.legend(mat_list, loc='lower right')
 plt.show()
-
+"""
 # # # # # # # Question 3 # # # # # # #
 # How does the performance change if you normalize the Smith-Waterman scores by
 # the length of the shortest sequence in a pair (i.e. divide the raw score by the
 # min length)?  Show the ROC curves for your best matrix and for the same matrix
 # with normalized scores. Are the false positive rates better or worse? Why do
 # you think this is so?
+"""
+gapO = -6
+gapE = -5
+mat = "BLOSUM50"
+roc_items = []
+
+# Read in the substitution matrix, get positive and negative scores
+subst = read_blosum(base_dir + "/HW3_due_02_23/" + mat)
+filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
+pos_scores = score_all_prots(subst, filepath, gapO, gapE)
+filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
+neg_scores = score_all_prots(subst, filepath, gapO, gapE)
+
+# Select FPR cut-off points to plot
+TPR = []
+FPR = []
+for c in np.arange(0.05, 1.01, 0.01):
+
+    # Find the number of negatives to keep for a FPR of i
+    neg_scores.sort(reverse=True)
+    n_to_keep = int(round(c * len(neg_scores)))
+    keep = neg_scores[0:n_to_keep]
+    cutoff = keep[-1]
+
+    # Find TPR at this cutoff
+    TPR.append(sum(i > cutoff for i in pos_scores)/len(pos_scores))
+    # Find FRP at this cutoff (should be close to i, but doubles and rounding do happen)
+    FPR.append(sum(i > cutoff for i in neg_scores)/len(neg_scores))
+
+# Save to ROC list
+print("True Positive Rates: ",TPR,"\n")
+print("False Positive Rates: ", FPR,"\n")
+roc_items.append((FPR,TPR))
+
+# # # # # # # NORMALIZED # # # # # # #
+# Read in the substitution matrix, get positive and negative scores
+subst = read_blosum(base_dir + "/HW3_due_02_23/" + mat)
+filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
+pos_scores = normal_score(subst, filepath, gapO, gapE)
+filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
+neg_scores = normal_score(subst, filepath, gapO, gapE)
+
+# Repeat with normalized values
+nTPR = []
+nFPR = []
+for c in np.arange(0.05, 1.01, 0.01):
+
+    # Find the number of negatives to keep for a FPR of i
+    neg_scores.sort(reverse=True)
+    n_to_keep = int(round(c * len(neg_scores)))
+    keep = neg_scores[0:n_to_keep]
+    cutoff = keep[-1]
+
+    # Find TPR at this cutoff
+    nTPR.append(sum(i > cutoff for i in pos_scores)/len(pos_scores))
+    # Find FRP at this cutoff (should be close to i, but doubles and rounding do happen)
+    nFPR.append(sum(i > cutoff for i in neg_scores)/len(neg_scores))
+
+# Save to ROC list
+print("True Positive Rates, normal: ",TPR,"\n")
+print("False Positive Rates, normal: ", FPR,"\n")
+roc_items.append((nFPR,nTPR))
+
+for i in range(0,2):
+    plt.plot(roc_items[i][0],roc_items[i][1])
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+plt.title("ROC curve: BLOSUM50 raw vs normalized")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.gca().set_aspect('equal', adjustable='box')
+plt.legend(["Raw scores","Normalized scores"], loc='lower right')
+plt.show()
+"""
+# # # # # # # # # # # # # #   PART I   # # # # # # # # # # # # # #
+
+# Write out the alignments of positive and negative pairs.
+
+# # # # # # # Question 1 # # # # # # #
+# Devise an optimization algorithm to modify the values in a starting score matrix
+# such as to maximize the following objective function: sum of TP rates for FP
+# rates of 0.0, 0.1, 0.2, and 0.3. The maximum value for the objective function
+# is 4.0 (where you are getting perfect separation of positive and negative pairs
+# even at the lowest false positive rate). You should use the gap and extension
+# penalties derived from Part 1. Remember, you must maintain symmetry in your matrix.
+# You can make use of real-valued scores in the matrices if desired (this is
+# probably a good idea).
+
+
+
+# # # # # # # Question 2 # # # # # # #
+# Beginning from the best matrix from above (that which produced the alignments),
+# run your optimization algorithm to maximize the fitness of the new matrix.
+# How much improvement do you see in the fitness?  Show the full ROC curves for
+# the original matrix and the optimized matrix. What happens when you now realign
+# the sequences using the new matrix and rescore? Show the new ROC curve following
+# realignment on the same graph as above. Qualitatively discuss how your matrix
+# and your alignments change following optimization.
+
+# # # # # # # Question 3 # # # # # # #
+# Beginning from the MATIO matrix, but using the same initial sequence alignments,
+# re-run the optimization. Show the same ROC plots as for (2). Discuss the
+# relationship between the results you see here and the results you saw for (2).
