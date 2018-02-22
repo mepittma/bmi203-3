@@ -51,7 +51,7 @@ def max_score(score_mat):
                 max_list = [(i,j)]
             elif score_mat[i][j] == max_seen:
                 max_list.append((i,j))
-    return max_seen, max_list
+    return max_seen, max_list[0] #only return index of first maximum.
 
 
 def get_cutoff(base_dir, gapO, gapE, threshold, blosum):
@@ -151,3 +151,27 @@ def normal_score(subst, filepath, gapO, gapE):
             scores.append(max_seen/norm)
 
     return scores
+
+def align_and_write(filepath,outpath,subst,gapO,gapE):
+    """
+
+    """
+    base_dir = "/Users/student/Documents/BMI206/bmi203-3"
+    with open(outpath,'w') as w:
+        with open(filepath) as f:
+
+            for line in f:
+                prot_1, prot_2 = line.split()
+
+                w.write("Alignment of {} and {}:\n".format(prot_1,prot_2))
+
+                # Read in these two sequences
+                seq_m = read_prot(base_dir + "/HW3_due_02_23/" + prot_1)
+                seq_n = read_prot(base_dir + "/HW3_due_02_23/" + prot_2)
+
+                # Create the alignment score matrix
+                score_mat, state_mat = score_seqs(subst, seq_m.upper(), seq_n.upper(), gapO, gapE)
+                max_seen, max_list = max_score(score_mat)
+                alignment = traceback(score_mat, state_mat, max_seen, max_list, seq_m, seq_n)
+
+                w.write("{}\n{}\n\n".format(''.join(alignment[0]),''.join(alignment[1])))

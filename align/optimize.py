@@ -1,4 +1,4 @@
-from .algs import score_all_prots
+from .utils import score_all_prots
 from copy import copy
 
 def move_matrix(coef,mat_1,mat_2,add_mat):

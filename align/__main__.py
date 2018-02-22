@@ -1,7 +1,7 @@
 # this file is only called when the package is called from the command
 # line
 from .algs import score_seqs, traceback
-from .utils import read_blosum, read_prot, max_score, get_cutoff, score_all_prots, normal_score
+from .utils import read_blosum, read_prot, max_score, get_cutoff, score_all_prots, normal_score, align_and_write
 from .optimize import obj_score
 import matplotlib.pyplot as plt
 import numpy as np
@@ -218,8 +218,6 @@ plt.show()
 """
 # # # # # # # # # # # # # #   PART I   # # # # # # # # # # # # # #
 
-# Write out the alignments of positive and negative pairs.
-
 # # # # # # # Question 1 # # # # # # #
 # Devise an optimization algorithm to modify the values in a starting score matrix
 # such as to maximize the following objective function: sum of TP rates for FP
@@ -230,7 +228,7 @@ plt.show()
 # You can make use of real-valued scores in the matrices if desired (this is
 # probably a good idea).
 
-
+# See optimize.py for optimization functions
 
 # # # # # # # Question 2 # # # # # # #
 # Beginning from the best matrix from above (that which produced the alignments),
@@ -240,6 +238,26 @@ plt.show()
 # the sequences using the new matrix and rescore? Show the new ROC curve following
 # realignment on the same graph as above. Qualitatively discuss how your matrix
 # and your alignments change following optimization.
+
+# Write out the alignments of positive and negative pairs with original BLOSUM50 matrix.
+
+filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
+outpath = base_dir + "/HW3_due_02_23/Pos_align.txt"
+subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
+gapO = -6
+gapE = -5
+
+align_and_write(filepath,outpath,subst,gapO,gapE)
+
+filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
+outpath = base_dir + "/HW3_due_02_23/Neg_align.txt"
+align_and_write(filepath,outpath,subst,gapO,gapE)
+
+
+# Optimize the matrix for true positives at all FPR.
+
+# Write out the alignments using this matrix.
+
 
 # # # # # # # Question 3 # # # # # # #
 # Beginning from the MATIO matrix, but using the same initial sequence alignments,

@@ -90,33 +90,32 @@ def traceback(score_mat, state_mat, max_seen, max_list, seq_m, seq_n):
     alignments = []
     score = max_seen
 
-    for cell in max_list:
-        residues_m = [] #keep track of residues in alignment
-        residues_n = []
-        i, j = cell
+    residues_m = [] #keep track of residues in alignment
+    residues_n = []
+    i, j = max_list
 
-        while score > 0:
+    while score > 0:
 
-            # Alignment score
-            if state_mat[i][j] == "align":
-                residues_m.append(seq_m[i-1])
-                residues_n.append(seq_n[j-1])
-                i = i-1
-                j = j-1
+        # Alignment score
+        if state_mat[i][j] == "align":
+            residues_m.append(seq_m[i-1])
+            residues_n.append(seq_n[j-1])
+            i = i-1
+            j = j-1
 
-            # Insertion score (came from north cell)
-            elif state_mat[i][j] == "ins":
-                residues_m.append("-")
-                residues_n.append(seq_n[j-1])
-                i = i-1
+        # Insertion score (came from north cell)
+        elif state_mat[i][j] == "ins":
+            residues_m.append("-")
+            residues_n.append(seq_n[j-1])
+            i = i-1
 
-            # Deletion score (came from west cell)
-            elif state_mat[i][j] == "del":
-                residues_m.append(seq_m[i-1])
-                residues_n.append("-")
-                j = j-1
+        # Deletion score (came from west cell)
+        elif state_mat[i][j] == "del":
+            residues_m.append(seq_m[i-1])
+            residues_n.append("-")
+            j = j-1
 
-            # Update score of focal cell
-            score = score_mat[i][j]
+        # Update score of focal cell
+        score = score_mat[i][j]
 
     return list(reversed(residues_m)), list(reversed(residues_n))
