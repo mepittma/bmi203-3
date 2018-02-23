@@ -308,8 +308,7 @@ save_out_max(neg_pair_scores, 15, base_dir + "/output/Neg_max.txt")
 # Optimize the matrix for true positives at all FPR.
 print("Reading in the blosum matrix...")
 subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
-opt_mat = random_permut(start_mat = subst, max_iter = 1)
-print ("Here's the optimized matrix we found: ", opt_mat)
+opt_mat = random_permut(start_mat = subst, max_iter = 200)
 # Save out as csv so we never have to do that again
 opt_mat[0].to_csv(base_dir+"/output/optimized_matrix.csv", sep=' ', header=True)
 
@@ -328,14 +327,21 @@ neg_f = base_dir + "/HW3_due_02_23/Negpairs.txt"
 pos_scores = score_all_prots(subst, pos_f, gapO, gapE)
 neg_scores = score_all_prots(subst, neg_f, gapO, gapE)
 roc_items.append(calc_ROC(pos_scores,neg_scores))
-print("Original BLOSUM scores: ", pos_scores, "\n", neg_scores)
 
 # Now read in the optimized BLOSUM matrix, get TPR and FPR
 #opt_mat = read_blosum(base_dir + "/output/optimized_matrix")
 pos_scores = score_all_prots(opt_mat[0], pos_f, gapO, gapE)
 neg_scores = score_all_prots(opt_mat[0], neg_f, gapO, gapE)
 roc_items.append(calc_ROC(pos_scores,neg_scores))
-print("New BLOSUM scores: ", pos_scores, "\n", neg_scores)
+
+# Align and write out
+filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
+outpath = base_dir + "/output/BLOSUM_opt_Pos_align.txt"
+align_and_write(filepath,outpath,opt_mat[0],gapO,gapE)
+
+filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
+outpath = base_dir + "/output/BLOSUM_opt_Neg_align.txt"
+align_and_write(filepath,outpath,opt_mat[0],gapO,gapE)
 
 for i in range(0,2):
     plt.plot(roc_items[i][1],roc_items[i][0])
@@ -348,6 +354,8 @@ plt.gca().set_aspect('equal', adjustable='box')
 plt.legend(["Raw scores","Normalized scores"], loc='lower right')
 plt.savefig(base_dir+"/output/optimized_ROC.pdf")
 
+
+print("Done optimizing BLOSUM50. Moving on to MATIO...")
 # # # # # # # Question 3 # # # # # # #
 # Beginning from the MATIO matrix, but using the same initial sequence alignments,
 # re-run the optimization. Show the same ROC plots as for (2). Discuss the
@@ -355,11 +363,11 @@ plt.savefig(base_dir+"/output/optimized_ROC.pdf")
 
 
 # Write out the alignments using this matrix.
+
 # Optimize the matrix for true positives at all FPR.
-print("Reading in the blosum matrix...")
+print("Reading in the MATIO matrix...")
 subst = read_blosum(base_dir + "/HW3_due_02_23/MATIO")
-opt_mat = random_permut(start_mat = subst, max_iter = 1)
-print ("Here's the optimized matrix we found: ", opt_mat)
+opt_mat = random_permut(start_mat = subst, max_iter = 200)
 # Save out as csv so we never have to do that again
 opt_mat[0].to_csv(base_dir+"/output/optimized_matrix.csv", sep=' ', header=True)
 
@@ -378,14 +386,21 @@ neg_f = base_dir + "/HW3_due_02_23/Negpairs.txt"
 pos_scores = score_all_prots(subst, pos_f, gapO, gapE)
 neg_scores = score_all_prots(subst, neg_f, gapO, gapE)
 roc_items.append(calc_ROC(pos_scores,neg_scores))
-print("Original BLOSUM scores: ", pos_scores, "\n", neg_scores)
 
 # Now read in the optimized BLOSUM matrix, get TPR and FPR
 #opt_mat = read_blosum(base_dir + "/output/optimized_matrix")
 pos_scores = score_all_prots(opt_mat[0], pos_f, gapO, gapE)
 neg_scores = score_all_prots(opt_mat[0], neg_f, gapO, gapE)
 roc_items.append(calc_ROC(pos_scores,neg_scores))
-print("New BLOSUM scores: ", pos_scores, "\n", neg_scores)
+
+# Align and write out
+filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
+outpath = base_dir + "/output/MATIO_opt_Pos_align.txt"
+align_and_write(filepath,outpath,opt_mat[0],gapO,gapE)
+
+filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
+outpath = base_dir + "/output/MATIO_opt_Neg_align.txt"
+align_and_write(filepath,outpath,opt_mat[0],gapO,gapE)
 
 for i in range(0,2):
     plt.plot(roc_items[i][1],roc_items[i][0])
