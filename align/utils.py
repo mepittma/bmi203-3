@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from .algs import score_seqs, traceback
 
 def read_blosum(filepath):

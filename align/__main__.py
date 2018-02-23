@@ -1,8 +1,8 @@
 # this file is only called when the package is called from the command
 # line
 from .algs import score_seqs, traceback
-from .utils import read_blosum, read_prot, max_score, get_cutoff, score_all_prots, normal_score, align_and_write
-from .optimize import obj_score, nelder_mead
+from .utils import read_blosum, read_prot, max_score, get_cutoff, score_all_prots, normal_score, align_and_write, calc_ROC
+from .optimize import obj_score, random_permut
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -244,7 +244,7 @@ plt.show()
 # and your alignments change following optimization.
 
 # Write out the alignments of positive and negative pairs with original BLOSUM50 matrix.
-
+"""
 filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
 outpath = base_dir + "/output/Pos_align.txt"
 subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
@@ -304,13 +304,14 @@ save_out_max(pos_pair_scores, 15, base_dir + "/output/Pos_max.txt")
 save_out_max(neg_pair_scores, 15, base_dir + "/output/Neg_max.txt")
 """
 
+
 # Optimize the matrix for true positives at all FPR.
 print("Reading in the blosum matrix...")
 subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
-opt_mat = nelder_mead(start_mat = subst, step = 1)
+opt_mat = random_permut(start_mat = subst, max_iter = 1)
 print ("Here's the optimized matrix we found: ", opt_mat)
 # Save out as csv so we never have to do that again
-opt_mat.to_csv(base_dir+"/output/optimized_matrix.csv", sep=' ', header=True)
+opt_mat[0].to_csv(base_dir+"/output/optimized_matrix.csv", sep=' ', header=True)
 
 
 # Find ROC values for the original and optimized matrix; plot
@@ -327,28 +328,72 @@ neg_f = base_dir + "/HW3_due_02_23/Negpairs.txt"
 pos_scores = score_all_prots(subst, pos_f, gapO, gapE)
 neg_scores = score_all_prots(subst, neg_f, gapO, gapE)
 roc_items.append(calc_ROC(pos_scores,neg_scores))
+print("Original BLOSUM scores: ", pos_scores, "\n", neg_scores)
 
 # Now read in the optimized BLOSUM matrix, get TPR and FPR
 #opt_mat = read_blosum(base_dir + "/output/optimized_matrix")
-pos_scores = score_all_prots(opt_mat, pos_f, gapO, gapE)
-neg_scores = score_all_prots(opt_mat, neg_f, gapO, gapE)
+pos_scores = score_all_prots(opt_mat[0], pos_f, gapO, gapE)
+neg_scores = score_all_prots(opt_mat[0], neg_f, gapO, gapE)
 roc_items.append(calc_ROC(pos_scores,neg_scores))
+print("New BLOSUM scores: ", pos_scores, "\n", neg_scores)
 
 for i in range(0,2):
-    plt.plot(roc_items[i][0],roc_items[i][1])
+    plt.plot(roc_items[i][1],roc_items[i][0])
 plt.xlim(0, 1)
 plt.ylim(0, 1)
-plt.title("ROC curve: BLOSUM50 raw vs normalized")
+plt.title("ROC curve: BLOSUM50 raw vs optimized")
 plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
 plt.gca().set_aspect('equal', adjustable='box')
 plt.legend(["Raw scores","Normalized scores"], loc='lower right')
-plt.savefig(base_dir+"/output/optimized_ROC.jpg")
-"""
-# Write out the alignments using this matrix.
-
+plt.savefig(base_dir+"/output/optimized_ROC.pdf")
 
 # # # # # # # Question 3 # # # # # # #
 # Beginning from the MATIO matrix, but using the same initial sequence alignments,
 # re-run the optimization. Show the same ROC plots as for (2). Discuss the
 # relationship between the results you see here and the results you saw for (2).
+
+
+# Write out the alignments using this matrix.
+# Optimize the matrix for true positives at all FPR.
+print("Reading in the blosum matrix...")
+subst = read_blosum(base_dir + "/HW3_due_02_23/MATIO")
+opt_mat = random_permut(start_mat = subst, max_iter = 1)
+print ("Here's the optimized matrix we found: ", opt_mat)
+# Save out as csv so we never have to do that again
+opt_mat[0].to_csv(base_dir+"/output/optimized_matrix.csv", sep=' ', header=True)
+
+
+# Find ROC values for the original and optimized matrix; plot
+gapO = -6
+gapE = -5
+roc_items = []
+
+# Filenames
+subst = read_blosum(base_dir + "/HW3_due_02_23/MATIO")
+pos_f = base_dir + "/HW3_due_02_23/Pospairs.txt"
+neg_f = base_dir + "/HW3_due_02_23/Negpairs.txt"
+
+# Read in the original BLOSUM matrix, get positive and negative scores
+pos_scores = score_all_prots(subst, pos_f, gapO, gapE)
+neg_scores = score_all_prots(subst, neg_f, gapO, gapE)
+roc_items.append(calc_ROC(pos_scores,neg_scores))
+print("Original BLOSUM scores: ", pos_scores, "\n", neg_scores)
+
+# Now read in the optimized BLOSUM matrix, get TPR and FPR
+#opt_mat = read_blosum(base_dir + "/output/optimized_matrix")
+pos_scores = score_all_prots(opt_mat[0], pos_f, gapO, gapE)
+neg_scores = score_all_prots(opt_mat[0], neg_f, gapO, gapE)
+roc_items.append(calc_ROC(pos_scores,neg_scores))
+print("New BLOSUM scores: ", pos_scores, "\n", neg_scores)
+
+for i in range(0,2):
+    plt.plot(roc_items[i][1],roc_items[i][0])
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+plt.title("ROC curve: BLOSUM50 raw vs optimized")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.gca().set_aspect('equal', adjustable='box')
+plt.legend(["Raw scores","Normalized scores"], loc='lower right')
+plt.savefig(base_dir+"/output/optimized_MATIO_ROC.pdf")
