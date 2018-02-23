@@ -52,7 +52,7 @@ for gapO in range(1,21):
 
         # Calculate false positive rate
         print("All scores for negative pairs: ", negs)
-        FP = sum(i > t for i in negs)
+        FP = sum(i >= t for i in negs)
         print("Number of FP for opening penalty of ", gapO, " and extension penalty of ",gapE,": ",FP)
         FPR = FP/neg_count
         print("FPR: ", FPR,"\n")
@@ -60,6 +60,7 @@ for gapO in range(1,21):
         params.append((gapO,gapE,FPR))
 
 print("Parameter results: ", params)
+
 """
 
 # # # # # # # Question 2 # # # # # # #
@@ -111,9 +112,9 @@ for mat in mat_list:
         cutoff = keep[-1]
 
         # Find TPR at this cutoff
-        TPR.append(sum(i > cutoff for i in pos_scores)/len(pos_scores))
+        TPR.append(sum(i >= cutoff for i in pos_scores)/len(pos_scores))
         # Find FRP at this cutoff (should be close to i, but doubles and rounding do happen)
-        FPR.append(sum(i > cutoff for i in neg_scores)/len(neg_scores))
+        FPR.append(sum(i >= cutoff for i in neg_scores)/len(neg_scores))
 
     # Save to ROC list
     print("True Positive Rates: ",TPR,"\n")
@@ -134,6 +135,9 @@ plt.xlim(0, 1)
 plt.ylim(0, 1)
 plt.gca().set_aspect('equal', adjustable='box')
 plt.legend(mat_list, loc='lower right')
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.grid()
 plt.show()
 """
 # # # # # # # Question 3 # # # # # # #
@@ -240,7 +244,7 @@ plt.show()
 # and your alignments change following optimization.
 
 # Write out the alignments of positive and negative pairs with original BLOSUM50 matrix.
-"""
+
 filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
 outpath = base_dir + "/output/Pos_align.txt"
 subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
@@ -252,6 +256,52 @@ align_and_write(filepath,outpath,subst,gapO,gapE)
 filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
 outpath = base_dir + "/output/Neg_align.txt"
 align_and_write(filepath,outpath,subst,gapO,gapE)
+
+
+# Find the best-scoring negative pairs and worst-scoring positive pairs, saving out to file
+subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
+gapO = -6
+gapE = -5
+
+def get_pair_score(subst,filepath,gapO,gapE):
+        base_dir = "/Users/student/Documents/BMI206/bmi203-3"
+
+        with open(filepath) as f:
+
+            score_pairs = []
+
+            for line in f:
+                prot_1, prot_2 = line.split()
+
+                # Read in these two sequences
+                seq_m = read_prot(base_dir + "/HW3_due_02_23/" + prot_1)
+                seq_n = read_prot(base_dir + "/HW3_due_02_23/" + prot_2)
+
+                # Create the alignment score matrix
+                score_mat, state_mat = score_seqs(subst, seq_m.upper(), seq_n.upper(), gapO, gapE)
+                max_seen, max_list = max_score(score_mat)
+
+                # Pair-score tuple
+                score_pairs.append(((prot_1, prot_2), max_seen))
+
+        return score_pairs
+
+pos_f = base_dir + "/HW3_due_02_23/Pospairs.txt"
+neg_f = base_dir + "/HW3_due_02_23/Negpairs.txt"
+pos_pair_scores = get_pair_score(subst, pos_f, gapO, gapE)
+pos_pair_scores.sort(key=lambda x: x[1])
+neg_pair_scores = get_pair_score(subst, neg_f, gapO, gapE)
+neg_pair_scores.sort(key=lambda x: x[1], reverse=True)
+
+def save_out_max(scores, n, filename):
+    scores = scores[:n]
+    with open(filename, "w") as f:
+        for pair in scores:
+            f.write(" ".join([pair[0][0], pair[0][1]]))
+            f.write("\n")
+
+save_out_max(pos_pair_scores, 15, base_dir + "/output/Pos_max.txt")
+save_out_max(neg_pair_scores, 15, base_dir + "/output/Neg_max.txt")
 """
 
 # Optimize the matrix for true positives at all FPR.
@@ -295,7 +345,6 @@ plt.gca().set_aspect('equal', adjustable='box')
 plt.legend(["Raw scores","Normalized scores"], loc='lower right')
 plt.savefig(base_dir+"/output/optimized_ROC.jpg")
 """
-
 # Write out the alignments using this matrix.
 
 
