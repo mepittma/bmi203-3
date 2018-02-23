@@ -255,43 +255,45 @@ align_and_write(filepath,outpath,subst,gapO,gapE)
 """
 
 # Optimize the matrix for true positives at all FPR.
-subst = read_blosum(base_dir + "/HW3_due_02_23/" + mat)
+print("Reading in the blosum matrix...")
+subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
 opt_mat = nelder_mead(start_mat = subst, step = 1)
 print ("Here's the optimized matrix we found: ", opt_mat)
-"""
-# Find ROC values for the
+# Save out as csv so we never have to do that again
+opt_mat.to_csv(base_dir+"/output/optimized_matrix.csv", sep=' ', header=True)
+
+
+# Find ROC values for the original and optimized matrix; plot
 gapO = -6
 gapE = -5
-mat = "BLOSUM50"
 roc_items = []
 
-# Read in the substitution matrix, get positive and negative scores
+# Filenames
+subst = read_blosum(base_dir + "/HW3_due_02_23/BLOSUM50")
+pos_f = base_dir + "/HW3_due_02_23/Pospairs.txt"
+neg_f = base_dir + "/HW3_due_02_23/Negpairs.txt"
 
-filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
-pos_scores = score_all_prots(subst, filepath, gapO, gapE)
-filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
-neg_scores = score_all_prots(subst, filepath, gapO, gapE)
+# Read in the original BLOSUM matrix, get positive and negative scores
+pos_scores = score_all_prots(subst, pos_f, gapO, gapE)
+neg_scores = score_all_prots(subst, neg_f, gapO, gapE)
+roc_items.append(calc_ROC(pos_scores,neg_scores))
 
-# Select FPR cut-off points to plot
-TPR = []
-FPR = []
-for c in np.arange(0.05, 1.01, 0.01):
+# Now read in the optimized BLOSUM matrix, get TPR and FPR
+#opt_mat = read_blosum(base_dir + "/output/optimized_matrix")
+pos_scores = score_all_prots(opt_mat, pos_f, gapO, gapE)
+neg_scores = score_all_prots(opt_mat, neg_f, gapO, gapE)
+roc_items.append(calc_ROC(pos_scores,neg_scores))
 
-    # Find the number of negatives to keep for a FPR of i
-    neg_scores.sort(reverse=True)
-    n_to_keep = int(round(c * len(neg_scores)))
-    keep = neg_scores[0:n_to_keep]
-    cutoff = keep[-1]
-
-    # Find TPR at this cutoff
-    TPR.append(sum(i > cutoff for i in pos_scores)/len(pos_scores))
-    # Find FRP at this cutoff (should be close to i, but doubles and rounding do happen)
-    FPR.append(sum(i > cutoff for i in neg_scores)/len(neg_scores))
-
-# Save to ROC list
-print("True Positive Rates: ",TPR,"\n")
-print("False Positive Rates: ", FPR,"\n")
-roc_items.append((FPR,TPR))
+for i in range(0,2):
+    plt.plot(roc_items[i][0],roc_items[i][1])
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+plt.title("ROC curve: BLOSUM50 raw vs normalized")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.gca().set_aspect('equal', adjustable='box')
+plt.legend(["Raw scores","Normalized scores"], loc='lower right')
+plt.savefig(base_dir+"/output/optimized_ROC.jpg")
 """
 
 # Write out the alignments using this matrix.

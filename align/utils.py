@@ -175,3 +175,26 @@ def align_and_write(filepath,outpath,subst,gapO,gapE):
                 alignment = traceback(score_mat, state_mat, max_seen, max_list, seq_m, seq_n)
 
                 w.write("{}\n{}\n\n".format(''.join(alignment[0]),''.join(alignment[1])))
+
+def calc_ROC(pos_scores,neg_scores):
+    """
+    """
+
+    # Select FPR cut-off points to plot
+    TPR = []
+    FPR = []
+    for c in np.arange(0.05, 1.01, 0.01):
+
+        # Find the number of negatives to keep for a FPR of i
+        neg_scores.sort(reverse=True)
+        n_to_keep = int(round(c * len(neg_scores)))
+        keep = neg_scores[0:n_to_keep]
+        cutoff = keep[-1]
+
+        # Find TPR at this cutoff
+        TPR.append(sum(i > cutoff for i in pos_scores)/len(pos_scores))
+        # Find FRP at this cutoff (should be close to i, but doubles and rounding do happen)
+        FPR.append(sum(i > cutoff for i in neg_scores)/len(neg_scores))
+
+    # return
+    return TPR,FPR

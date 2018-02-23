@@ -1,5 +1,6 @@
 from .utils import score_all_prots
 from copy import copy
+import numpy as np
 
 def move_matrix(coef,mat_1,mat_2,add_mat):
     """
@@ -24,30 +25,42 @@ def obj_score(subst):
     Input: substitution matrix for which to test objective score
     Output: objective score of that matrix
     """
+    base_dir = "/Users/student/Documents/BMI206/bmi203-3"
+    gapO = -6
+    gapE = -5
 
     # Test matrix on positive and negative scores
+    print("\tScoring positives...")
     filepath = base_dir + "/HW3_due_02_23/Pospairs.txt"
     pos_scores = score_all_prots(subst, filepath, gapO, gapE)
 
+    print("\tScoring negatives...")
     filepath = base_dir + "/HW3_due_02_23/Negpairs.txt"
     neg_scores = score_all_prots(subst, filepath, gapO, gapE)
+    neg_scores.sort(reverse=True)
 
     # Select FPR cut-off points to plot
+    print("\tFinding cutoff...")
     score = 0.0
     for c in np.arange(0, 0.31, 0.1):
 
         # Find the number of negatives to keep for a FPR of i
-        neg_scores.sort(reverse=True)
         n_to_keep = int(round(c * len(neg_scores)))
         keep = neg_scores[0:n_to_keep]
-        cutoff = keep[-1]
+
+        # If there were any to keep at all, return them
+        if len(keep) > 0:
+            cutoff = keep[-1]
+        else:
+            #If we aren't accepting any negative alignments, the cutoff is the highest neg alignment score +1
+            cutoff = neg_scores[0] + 1
 
         # Find TPR at this cutoff, add to score
         score += (sum(i >= cutoff for i in pos_scores)/len(pos_scores))
 
     return score
 
-def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200, refl=1, expn=2, contr=0.5, shrnk=0.5):
+def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=4, max_iter=10, refl=1, expn=2, contr=0.5, shrnk=0.5):
     """
     (adapted from https://github.com/fchollet/nelder-mead/blob/master/nelder_mead.py)
 
@@ -64,19 +77,26 @@ def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200
 
     """
 
+    base_dir = "/Users/student/Documents/BMI206/bmi203-3"
+
     # Initialize
     #start_mat is pandas
     #res = [[pandas, score],[pandas,score]]
+    print("Calculating the objective score of the original BLOSUM matrix...")
     prev_best = obj_score(start_mat)
     res = [[start_mat, prev_best]]    # list of lists to keep track of matrix/score pairs
     no_improv = 0                     # set a count to keep track of how many times this exact matrix was seen
 
-    for i, row in start_mat.iterrows():
-        for j, col in row.items():
-            x = copy.copy(start_mat)                # make a shallow copy of the last matrix to be seen
-            x.iloc[i,j] = x.iloc[i,j] + step        # add the chosen step to this parameter
-            x.iloc[j,i] = x.iloc[j,i] + step        # keep symmetric!
-            score = obj_score(x)                            # score this new matrix
+    # Interesting function of symmetry: we try addition of one step and addition of two steps at the same time
+    print("Calculating first permutation of the BLOSUM matrix...")
+    for i,row in start_mat.iterrows():
+        for j in start_mat.columns:
+            x = copy(start_mat)                     # make a shallow copy of the last matrix to be seen
+            print("Looking at row ", i, ", col ",j)
+            print("Value at this index: ", x.loc[i,j])
+            x.loc[i,j] = x.loc[i,j] + step          # add the chosen step to this parameter
+            x.loc[i,j] = x.loc[i,j]                 # keep symmetric!
+            score = obj_score(x)                    # score this new matrix
             res.append([x, score])                  # append this matrix and score to the running list
 
     # Run through this loop until a break condition is met
@@ -91,9 +111,13 @@ def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200
         if iters >= max_iter:
             return res[0]
 
+        # If we've hit the maximum possible optimization, stop here and return the best matrix/value
+        if best == 4.0:
+            return res[0]
+
         # If we haven't hit the max, we're going through another iteration
         iters += 1
-        print('...best so far:', best)
+        print("Best score at iteration ", iters, ": ", best)
 
         # If the best is better than the previous by designated margin,
         # reset improvement stagnation at 0 and update "prev_best"
@@ -114,15 +138,16 @@ def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200
         centroid = pd.DataFrame(0, index=start_mat.columns.values, columns=start_mat.columns.values)
         print("Rows in centroid matrix: ", len(centroid))
         print("Columns in centroid matrix: ", len(centroid[0]))
+        print("Centroid matrix: ", centroid)
 
         # Iteratively calculate the centroid using every matrix but the last
         # DOUBLE THE NECESSARY TIME/SPACE, should probably fix
         for tup in res[:-1]:
 
             mat = tup[0]
-            for i, row in start_mat.iterrows():
-                for j, col in row.items():
-                    centroid.iloc[i,j] += mat.iloc[i,j]/(len(res)-1)
+            for i,row in start_mat.iterrows():
+                for j in start_mat.columns:
+                    centroid.loc[i,j] += mat.loc[i,j]/(len(res)-1)
 
         # Attempt reflection - does reflecting the worst point through the centroid improve the objective score?
         #xr = move_matrix(refl, centroid, res[-1][0], centroid)
@@ -144,6 +169,9 @@ def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200
         if rscore > res[0][1]:
             #xe = move_matrix(expn, res[-1][0], centroid, centroid)
             xe = centroid + expn*(res[-1][0] - centroid)
+            print("Here's what the centroid matrix looks like: ", centroid)
+            print("Here's what the worst matrix looks like: ", res[-1][0])
+            print("Here's what the expanded matrix looks like: ", xe)
             escore = obj_score(xe)
 
             # Keep whichever score was better
@@ -159,6 +187,9 @@ def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200
         # Contraction
         #xc = move_matrix(contr, res[-1][0], centroid, centroid)
         xc = centroid + contr*(res[-1][0] - centroid)
+        print("Here's what the centroid matrix looks like: ", centroid)
+        print("Here's what the worst matrix looks like: ", res[-1][0])
+        print("Here's what the contracted matrix looks like: ", xc)
         cscore = obj_score(xc)
 
         # If the contraction score is better than the worst score, replace
@@ -171,8 +202,11 @@ def nelder_mead(start_mat, step, improv_thr=0.0001, improv_iter=10, max_iter=200
         x1 = res[0][0] # This is the top scoring matrix
         nres = []
         for pair in res:
-            redx = move_matrix(shrnk, pair[0], x1, x1)
             redx = x1 + shrnk*(pair[0] - x1)
+            print("Here's what the centroid matrix looks like: ", centroid)
+            print("Here's what the best matrix looks like: ", res[0][0])
+            print("Here's what the reduced matrix looks like: ", redx)
+
             score = obj_score(redx)
             nres.append([redx, score])
         res = nres
